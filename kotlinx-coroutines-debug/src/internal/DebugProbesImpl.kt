@@ -32,6 +32,16 @@ internal object DebugProbesImpl {
     // To sort coroutines by creation order, used as unique id
     private var sequenceNumber: Long = 0
 
+    /*
+     * This is an optimization in the face of KT-29997:
+     * Consider suspending call stack a()->b()->c() and c() completes its execution and every call is
+     * "almost" in tail position.
+     *
+     * Then at least three RUNNING -> RUNNING transitions will occur consecutively and complexity of each is O(depth).
+     * To avoid that quadratic complexity, we are caching owner of such chains in this map and update it incrementally.
+     */
+    private val ownersCache = WeakHashMap<CoroutineStackFrame, ArtificialStackFrame<*>>()
+
     @Synchronized
     public fun install() {
         if (++installations > 1) return
@@ -172,7 +182,7 @@ internal object DebugProbesImpl {
          * 4) Prepend dumped stacktrace (trimmed by target frame) to continuation stacktrace
          *
          * Heuristic may fail on recursion and overloads, but it will be automatically improved
-         * with KT-29997
+         * with KT-29997.
          */
         val indexOfResumeWith = actualTrace.indexOfFirst {
             it.className == "kotlin.coroutines.jvm.internal.BaseContinuationImpl" &&
@@ -248,14 +258,33 @@ internal object DebugProbesImpl {
 
     private fun updateState(frame: Continuation<*>, state: State) {
         if (!isInstalled) return
+        if (state == State.RUNNING) {
+            updateRunningState(frame, state)
+            return
+        }
+
         // Find ArtificialStackFrame of the coroutine
         val owner = frame.owner()
         updateState(owner, frame, state)
     }
 
+    @Synchronized // See comment to ownersCache
+    private fun updateRunningState(continuation: Continuation<*>, state: State) {
+        val frame = continuation as? CoroutineStackFrame ?: return
+        val owner = ownersCache.remove(frame) ?: frame.owner() ?: return
+        val completion = frame.callerFrame
+        if (completion != null) {
+            ownersCache[completion] = owner
+        }
+
+        val coroutineState = capturedCoroutines[owner] ?: return
+        coroutineState.updateState(state, continuation)
+    }
+
     @Synchronized
     private fun updateState(owner: ArtificialStackFrame<*>?, frame: Continuation<*>, state: State) {
         val coroutineState = capturedCoroutines[owner] ?: return
+        if (coroutineState.state == State.RUNNING && frame is CoroutineStackFrame) ownersCache.remove(frame)
         coroutineState.updateState(state, frame)
     }
 
