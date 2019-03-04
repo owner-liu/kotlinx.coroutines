@@ -29,8 +29,9 @@ class NonCancellableTest : TestBase() {
         try {
             job.await()
             expectUnreached()
-        } catch (e: CancellationException) {
-            assertNull(e.cause)
+        } catch (e: JobCancellationException) {
+            val cause = e.cause as JobCancellationException // shall be recovered JCE
+            assertNull(cause.cause)
             finish(6)
         }
     }
@@ -120,7 +121,8 @@ class NonCancellableTest : TestBase() {
             job.await()
             expectUnreached()
         } catch (e: CancellationException) {
-            assertNull(e.cause)
+            val cause = e.cause as JobCancellationException // shall be recovered JCE
+            assertNull(cause.cause)
             finish(7)
         }
     }
