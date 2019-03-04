@@ -42,7 +42,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "kotlinx.team.node:kotlinx.team.node.gradle.plugin:0.1.0-dev-27"
+        classpath "kotlinx.team.node:kotlinx.team.node.gradle.plugin:0.1.0-dev-29"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
         classpath "org.jetbrains.gradle.benchmarks:benchmarks.plugin:$benchmarks_version"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"

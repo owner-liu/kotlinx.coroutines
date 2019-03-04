@@ -5,8 +5,12 @@ apply plugin: 'kotlin-multiplatform'
 apply plugin: 'kotlinx.team.node'
 apply plugin: 'org.jetbrains.gradle.benchmarks.plugin'
 
+node {
+    version = "$node_version"
+}
+
 kotlin {
-    configure(sourceSets) {
+    sourceSets.all {
         def srcDir = name.endsWith('Main') ? 'src' : 'test'
         def platform = name[0..-5]
         kotlin.srcDir "$platform/$srcDir"
@@ -32,9 +36,7 @@ kotlin.sourceSets {
 
 
 kotlin {
-    targets {
-        fromPreset(presets.js, 'js')
-    }
+    js()
 
     sourceSets {
         jsMain.dependencies {
@@ -64,10 +66,6 @@ compileTestKotlinJs {
     kotlinOptions.metaInfo = true
     kotlinOptions.sourceMap = true
     kotlinOptions.moduleKind = 'umd'
-}
-
-node {
-    version = "$node_version"
 }
 
 benchmark {
