@@ -25,6 +25,7 @@ include "kotlinx-coroutines-core"
 module('kotlinx-coroutines-test')
 module('kotlinx-coroutines-debug')
 module('stdlib-stubs')
+module('benchmarks-common')
 
 module('integration/kotlinx-coroutines-guava')
 module('integration/kotlinx-coroutines-jdk8')

@@ -8,7 +8,7 @@ apply from: rootProject.file("gradle/experimental.gradle")
 def rootModule = "kotlinx.coroutines"
 def coreModule = "kotlinx-coroutines-core"
 // Not applicable for Kotlin plugin
-def sourceless = ['kotlinx.coroutines', 'site']
+def sourceless = ['kotlinx.coroutines', 'site', 'benchmarks-common']
 def internal = sourceless + ['benchmarks', 'knit', 'js-stub', 'stdlib-stubs', 'binary-compatibility-validator']
 // Not published
 def unpublished = internal + ['kotlinx-coroutines-rx-example', 'example-frontend-js', 'android-unit-tests']
@@ -17,7 +17,7 @@ static def platformOf(project) {
     def name = project.name
     if (name.endsWith("-js")) return "js"
     if (name.endsWith("-common") || name.endsWith("-native")) {
-        throw IllegalStateException("$name platform is not supported")
+        throw new IllegalStateException("$name platform is not supported")
     }
     return "jvm"
 }
@@ -31,6 +31,8 @@ buildscript {
         }
     }
     repositories {
+        maven { url 'https://dl.bintray.com/orangy/maven' }
+        gradlePluginPortal()
         jcenter()
         maven { url "https://kotlin.bintray.com/kotlinx" }
         maven { url "https://kotlin.bintray.com/kotlin-dev" }
@@ -40,7 +42,9 @@ buildscript {
     }
 
     dependencies {
+        classpath "kotlinx.team.node:kotlinx.team.node.gradle.plugin:0.1.0-dev-27"
         classpath "org.jfrog.buildinfo:build-info-extractor-gradle:$artifactory_plugin_version"
+        classpath "org.jetbrains.gradle.benchmarks:benchmarks.plugin:$benchmarks_version"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokka_version"
         classpath "org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicFU_version"
@@ -78,6 +82,8 @@ allprojects {
             google()
         }
         jcenter()
+        maven { url 'https://dl.bintray.com/orangy/maven' }
+        gradlePluginPortal()
         maven { url "https://kotlin.bintray.com/kotlin-dev" }
         maven { url "https://kotlin.bintray.com/kotlin-eap" }
         maven { url "https://kotlin.bintray.com/kotlinx" }
@@ -88,11 +94,8 @@ allprojects {
     // Add dependency to core source sets. Core is configured in kx-core/build.gradle
     evaluationDependsOn(":$coreModule")
     if (sourceless.contains(projectName)) return
-
     def platform = platformOf(it)
     apply from: rootProject.file("gradle/compile-${platform}.gradle")
-
-
     dependencies {
         // See comment below for rationale, it will be replaced with "project" dependency
         compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$version"
@@ -127,7 +130,8 @@ configure(subprojects.findAll { it.name != coreModule && it.name != rootModule }
 }
 
 // Redefine source sets because we are not using 'kotlin/main/fqn' folder convention
-configure(subprojects.findAll { !sourceless.contains(it.name) && it.name != "benchmarks" && it.name != coreModule }) {
+configure(subprojects.findAll { !sourceless.contains(it.name) &&
+        !it.name.startsWith("benchmarks") && it.name != coreModule }) {
     sourceSets {
         main.kotlin.srcDirs = ['src']
         test.kotlin.srcDirs = ['test']

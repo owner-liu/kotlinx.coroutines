@@ -1,0 +1,77 @@
+/*
+ * Copyright 2016-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license.
+ */
+apply plugin: 'kotlin-multiplatform'
+apply plugin: 'kotlinx.team.node'
+apply plugin: 'org.jetbrains.gradle.benchmarks.plugin'
+
+kotlin {
+    configure(sourceSets) {
+        def srcDir = name.endsWith('Main') ? 'src' : 'test'
+        def platform = name[0..-5]
+        kotlin.srcDir "$platform/$srcDir"
+        languageSettings {
+            progressiveMode = true
+        }
+    }
+}
+
+kotlin.sourceSets {
+    commonMain.dependencies {
+        api "org.jetbrains.gradle.benchmarks:runtime:$benchmarks_version"
+        api "org.jetbrains.kotlinx:kotlinx-coroutines-core:$version"
+        api "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlin_version"
+        api "org.jetbrains.kotlinx:atomicfu-common:$atomicFU_version"
+    }
+
+    commonTest.dependencies {
+        api "org.jetbrains.kotlin:kotlin-test-common:$kotlin_version"
+        api "org.jetbrains.kotlin:kotlin-test-annotations-common:$kotlin_version"
+    }
+}
+
+
+kotlin {
+    targets {
+        fromPreset(presets.js, 'js')
+    }
+
+    sourceSets {
+        jsMain.dependencies {
+            api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-js', version: kotlin_version
+            api "org.jetbrains.kotlinx:atomicfu-js:$atomicFU_version"
+        }
+
+        jsTest.dependencies {
+            api "org.jetbrains.kotlin:kotlin-test-js:$kotlin_version"
+        }
+    }
+}
+
+compileKotlinJs {
+    kotlinOptions.metaInfo = true
+    kotlinOptions.sourceMap = true
+    kotlinOptions.moduleKind = 'umd'
+
+    kotlinOptions {
+        // drop -js suffix from outputFile
+        def baseName = project.name - "-js"
+        outputFile = new File(outputFile.parent, baseName + ".js")
+    }
+}
+
+compileTestKotlinJs {
+    kotlinOptions.metaInfo = true
+    kotlinOptions.sourceMap = true
+    kotlinOptions.moduleKind = 'umd'
+}
+
+node {
+    version = "$node_version"
+}
+
+benchmark {
+    configurations {
+        register("js")
+    }
+}
